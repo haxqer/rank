@@ -6,47 +6,47 @@ import (
 )
 
 const (
-	// MaxLevel 跳表的最大层级
-	MaxLevel = 42
-	// Probability 跳表层级提升概率，值为1/4
+	// MaxLevel is the maximum level of the skip list
+	MaxLevel = 36
+	// Probability is the probability of level promotion, which is 1/4
 	Probability = 0.25
 )
 
 var defaultRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-// Element 是跳表中存储的元素
+// Element is an element stored in the skip list
 type Element struct {
-	// Member 成员ID或名称
+	// Member is the ID or name of the member
 	Member string
-	// Score 分数，用于排序
+	// Score is used for ranking
 	Score int64
-	// Data 可以存储的额外数据
+	// Data is additional data that can be stored
 	Data interface{}
 }
 
-// node 内部节点结构
+// node is the internal node structure
 type node struct {
 	element Element
-	// level[i] 表示第i层的下一个节点和跨度
+	// level[i] represents the next node and span at level i
 	level []*levelNode
 }
 
-// levelNode 表示跳表中某一层级的节点
+// levelNode represents a node at a specific level in the skip list
 type levelNode struct {
-	forward *node  // 指向这一层的下一个节点
-	span    uint64 // 到下一个节点的跨度
+	forward *node  // points to the next node at this level
+	span    uint64 // span to the next node
 }
 
-// SkipList 跳表实现
+// SkipList implementation
 type SkipList struct {
-	head       *node            // 头节点，不包含实际数据
-	tail       *node            // 尾节点
-	length     uint64           // 元素数量
-	level      int              // 当前的最大层级
-	elementMap map[string]*node // 成员到节点的映射，用于快速查找
+	head       *node            // head node, doesn't contain actual data
+	tail       *node            // tail node
+	length     uint64           // number of elements
+	level      int              // current maximum level
+	elementMap map[string]*node // mapping from member to node for fast lookup
 }
 
-// NewSkipList 创建一个新的跳表
+// NewSkipList creates a new skip list
 func NewSkipList() *SkipList {
 	head := &node{
 		level: make([]*levelNode, MaxLevel),
@@ -66,7 +66,7 @@ func NewSkipList() *SkipList {
 	}
 }
 
-// randomLevel 随机生成层数
+// randomLevel generates a random level
 func randomLevel() int {
 	level := 1
 	for level < MaxLevel && defaultRand.Float64() < Probability {
@@ -75,14 +75,14 @@ func randomLevel() int {
 	return level
 }
 
-// Insert 插入元素，如果已存在则更新
+// Insert inserts an element, or updates it if it already exists
 func (sl *SkipList) Insert(member string, score int64, data interface{}) *Element {
-	// 如果已存在，先删除旧的
+	// If already exists, delete the old one first
 	if oldNode, ok := sl.elementMap[member]; ok {
 		sl.Delete(member, oldNode.element.Score)
 	}
 
-	// 创建新节点
+	// Create a new node
 	level := randomLevel()
 	if level > sl.level {
 		sl.level = level
@@ -104,11 +104,11 @@ func (sl *SkipList) Insert(member string, score int64, data interface{}) *Elemen
 		}
 	}
 
-	// 获取插入位置
+	// Get insertion position
 	var update [MaxLevel]*node
 	var rank [MaxLevel]uint64
 
-	// 查找位置
+	// Find position
 	x := sl.head
 	for i := sl.level - 1; i >= 0; i-- {
 		if i == sl.level-1 {
@@ -117,7 +117,7 @@ func (sl *SkipList) Insert(member string, score int64, data interface{}) *Elemen
 			rank[i] = rank[i+1]
 		}
 
-		// 注意这里的比较逻辑: 分数高的排在前面，分数相同时按照成员ID字典序排序
+		// 注意比较逻辑：分数高的排在前面，如果分数相同，按成员ID字典序排列
 		for x.level[i].forward != nil &&
 			(x.level[i].forward.element.Score > score ||
 				(x.level[i].forward.element.Score == score &&
@@ -128,41 +128,41 @@ func (sl *SkipList) Insert(member string, score int64, data interface{}) *Elemen
 		update[i] = x
 	}
 
-	// 插入节点
+	// Insert the node
 	for i := 0; i < level; i++ {
 		newNode.level[i].forward = update[i].level[i].forward
 		update[i].level[i].forward = newNode
 
-		// 更新跨度
+		// Update spans
 		newNode.level[i].span = update[i].level[i].span - (rank[0] - rank[i])
 		update[i].level[i].span = (rank[0] - rank[i]) + 1
 	}
 
-	// 更新跨度
+	// Update spans for higher levels
 	for i := level; i < sl.level; i++ {
 		update[i].level[i].span++
 	}
 
-	// 如果是尾节点，则更新尾指针
+	// Update tail pointer if this is the last node
 	if newNode.level[0].forward == nil {
 		sl.tail = newNode
 	}
 
-	// 保存到映射表
+	// Save to the map
 	sl.elementMap[member] = newNode
 	sl.length++
 
 	return &newNode.element
 }
 
-// Delete 删除元素
+// Delete removes an element
 func (sl *SkipList) Delete(member string, score int64) bool {
-	// 查找要删除的节点
+	// Find the node to delete
 	var update [MaxLevel]*node
 
 	x := sl.head
 	for i := sl.level - 1; i >= 0; i-- {
-		// 注意这里的比较逻辑: 分数高的排在前面，分数相同时按照成员ID字典序排序
+		// 注意比较逻辑：分数高的排在前面，如果分数相同，按成员ID字典序排列
 		for x.level[i].forward != nil &&
 			(x.level[i].forward.element.Score > score ||
 				(x.level[i].forward.element.Score == score &&
@@ -172,10 +172,10 @@ func (sl *SkipList) Delete(member string, score int64) bool {
 		update[i] = x
 	}
 
-	// 找到待删除节点
+	// Find the node to be deleted
 	x = x.level[0].forward
 	if x != nil && x.element.Score == score && x.element.Member == member {
-		// 从各层中删除
+		// Remove from all levels
 		for i := 0; i < sl.level; i++ {
 			if update[i].level[i].forward == x {
 				update[i].level[i].span += x.level[i].span - 1
@@ -185,17 +185,17 @@ func (sl *SkipList) Delete(member string, score int64) bool {
 			}
 		}
 
-		// 如果删除的是尾节点
+		// If deleted node was the tail
 		if x.level[0].forward == nil {
 			sl.tail = update[0]
 		}
 
-		// 更新最高层级
+		// Update the maximum level
 		for sl.level > 1 && sl.head.level[sl.level-1].forward == nil {
 			sl.level--
 		}
 
-		// 从映射表中删除
+		// Remove from the map
 		delete(sl.elementMap, member)
 		sl.length--
 
@@ -205,13 +205,13 @@ func (sl *SkipList) Delete(member string, score int64) bool {
 	return false
 }
 
-// GetRank 获取指定成员的排名，从1开始计算（排名第一的分数最高）
+// GetRank gets the rank of a specified member, starting from 1 (rank 1 has the highest score)
 func (sl *SkipList) GetRank(member string, score int64) int64 {
 	var rank uint64 = 0
 	x := sl.head
 
 	for i := sl.level - 1; i >= 0; i-- {
-		// 注意这里的比较逻辑: 分数高的排在前面，分数相同时按照成员ID字典序排序
+		// 注意比较逻辑：分数高的排在前面，如果分数相同，按成员ID字典序排列
 		for x.level[i].forward != nil &&
 			(x.level[i].forward.element.Score > score ||
 				(x.level[i].forward.element.Score == score &&
@@ -229,7 +229,7 @@ func (sl *SkipList) GetRank(member string, score int64) int64 {
 	return 0
 }
 
-// GetByRank 根据排名获取元素，排名从1开始
+// GetByRank gets an element by its rank, rank starts from 1
 func (sl *SkipList) GetByRank(rank int64) *Element {
 	if rank <= 0 || rank > int64(sl.length) {
 		return nil
@@ -239,22 +239,20 @@ func (sl *SkipList) GetByRank(rank int64) *Element {
 	x := sl.head
 
 	for i := sl.level - 1; i >= 0; i-- {
-		for x.level[i].forward != nil && traversed+x.level[i].span < uint64(rank) {
+		for x.level[i].forward != nil && traversed+x.level[i].span <= uint64(rank) {
 			traversed += x.level[i].span
 			x = x.level[i].forward
 		}
 
-		if traversed+1 == uint64(rank) {
-			if x.level[i].forward != nil {
-				return &x.level[i].forward.element
-			}
+		if traversed == uint64(rank) {
+			return &x.element
 		}
 	}
 
 	return nil
 }
 
-// GetElementByMember 通过成员名获取元素
+// GetElementByMember gets an element by member name
 func (sl *SkipList) GetElementByMember(member string) *Element {
 	if node, ok := sl.elementMap[member]; ok {
 		return &node.element
@@ -262,13 +260,13 @@ func (sl *SkipList) GetElementByMember(member string) *Element {
 	return nil
 }
 
-// UpdateScore 更新成员的分数
+// UpdateScore updates a member's score
 func (sl *SkipList) UpdateScore(member string, newScore int64) bool {
 	if node, ok := sl.elementMap[member]; ok {
 		oldScore := node.element.Score
 		data := node.element.Data
 
-		// 删除旧节点并添加新节点
+		// Delete the old node and add a new one
 		sl.Delete(member, oldScore)
 		sl.Insert(member, newScore, data)
 		return true
@@ -276,11 +274,11 @@ func (sl *SkipList) UpdateScore(member string, newScore int64) bool {
 	return false
 }
 
-// GetRankRange 获取指定排名范围的元素
+// GetRankRange gets elements within a specified rank range
 func (sl *SkipList) GetRankRange(start, end int64) []*Element {
 	var elements []*Element
 
-	// 边界检查
+	// Boundary check
 	if start <= 0 {
 		start = 1
 	}
@@ -293,7 +291,7 @@ func (sl *SkipList) GetRankRange(start, end int64) []*Element {
 		return elements
 	}
 
-	// 获取指定范围的元素
+	// Get elements in the specified range
 	for i := start; i <= end; i++ {
 		element := sl.GetByRank(i)
 		if element != nil {
@@ -304,23 +302,28 @@ func (sl *SkipList) GetRankRange(start, end int64) []*Element {
 	return elements
 }
 
-// GetScoreRange 获取指定分数范围的元素
-func (sl *SkipList) GetScoreRange(minScore, maxScore int64) []*Element {
+// GetScoreRange gets elements within a specified score range
+func (sl *SkipList) GetScoreRange(min, max int64) []*Element {
 	var elements []*Element
 
-	// 从头节点开始遍历
+	// Boundary check
+	if min > max {
+		return elements
+	}
+
+	// Find the first node whose score is in the range
 	x := sl.head
 	for i := sl.level - 1; i >= 0; i-- {
-		for x.level[i].forward != nil && x.level[i].forward.element.Score > maxScore {
+		for x.level[i].forward != nil && x.level[i].forward.element.Score > max {
 			x = x.level[i].forward
 		}
 	}
 
-	// 找到第一个分数小于等于maxScore的节点
+	// Move to the first node that has a score <= max
 	x = x.level[0].forward
 
-	// 收集所有分数在范围内的元素
-	for x != nil && x.element.Score >= minScore {
+	// Collect all nodes within the range
+	for x != nil && x.element.Score >= min {
 		elements = append(elements, &x.element)
 		x = x.level[0].forward
 	}
@@ -328,7 +331,7 @@ func (sl *SkipList) GetScoreRange(minScore, maxScore int64) []*Element {
 	return elements
 }
 
-// Len 返回跳表中元素的数量
+// Len returns the number of elements in the skip list
 func (sl *SkipList) Len() uint64 {
 	return sl.length
 }

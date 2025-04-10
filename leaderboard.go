@@ -6,61 +6,61 @@ import (
 	"time"
 )
 
-// LeaderboardConfig 配置
+// LeaderboardConfig configuration
 type LeaderboardConfig struct {
-	// ID 排行榜唯一标识
+	// ID unique identifier for the leaderboard
 	ID string
-	// Name 排行榜名称
+	// Name display name of the leaderboard
 	Name string
-	// ScoreOrder 分数排序方式，为true时高分在前，为false时低分在前
+	// ScoreOrder score ordering method, true for high scores first, false for low scores first
 	ScoreOrder bool
-	// UpdatePolicy 更新策略，决定如何处理分数更新
+	// UpdatePolicy policy for handling score updates
 	UpdatePolicy UpdatePolicy
 }
 
-// UpdatePolicy 分数更新策略
+// UpdatePolicy score update policy
 type UpdatePolicy int
 
 const (
-	// UpdateIfHigher 仅当新分数高于旧分数时更新
+	// UpdateIfHigher only update when new score is higher than old score
 	UpdateIfHigher UpdatePolicy = iota
-	// UpdateIfLower 仅当新分数低于旧分数时更新
+	// UpdateIfLower only update when new score is lower than old score
 	UpdateIfLower
-	// UpdateAlways 始终更新分数
+	// UpdateAlways always update the score
 	UpdateAlways
 )
 
-// MemberData 排行榜成员数据
+// MemberData leaderboard member data
 type MemberData struct {
-	// Member 成员标识
+	// Member member identifier
 	Member string
-	// Score 分数
+	// Score member's score
 	Score int64
-	// Data 额外数据
+	// Data additional data
 	Data interface{}
-	// UpdatedAt 更新时间
+	// UpdatedAt last update time
 	UpdatedAt time.Time
 }
 
-// RankData 排名数据
+// RankData ranking data
 type RankData struct {
-	// Rank 排名
+	// Rank position in the leaderboard
 	Rank int64
-	// Member 成员数据
+	// Member member data
 	MemberData
 }
 
-// Leaderboard 排行榜实现
+// Leaderboard implementation
 type Leaderboard struct {
-	// config 配置信息
+	// config configuration information
 	config LeaderboardConfig
-	// skipList 底层跳表存储
+	// skipList underlying skip list storage
 	skipList *SkipList
-	// mutex 互斥锁，保证并发安全
+	// mutex mutex for thread safety
 	mutex sync.RWMutex
 }
 
-// NewLeaderboard 创建新排行榜
+// NewLeaderboard creates a new leaderboard
 func NewLeaderboard(config LeaderboardConfig) *Leaderboard {
 	return &Leaderboard{
 		config:   config,
@@ -69,146 +69,151 @@ func NewLeaderboard(config LeaderboardConfig) *Leaderboard {
 	}
 }
 
-// Add 添加或更新成员分数
+// Add adds or updates a member's score
 func (lb *Leaderboard) Add(member string, score int64, data interface{}) (*RankData, error) {
 	lb.mutex.Lock()
 	defer lb.mutex.Unlock()
-	
-	// 检查成员是否已存在
+
+	// Check if member already exists
 	existing := lb.skipList.GetElementByMember(member)
-	
-	// 根据更新策略决定是否需要更新
+
+	// Decide whether to update based on update policy
 	if existing != nil {
 		var existingScore int64
 		if md, ok := existing.Data.(MemberData); ok {
-			existingScore = md.Score // 这是真实的分数，而非跳表内部存储的可能取反的分数
+			existingScore = md.Score // This is the actual score, not the potentially inverted score stored in the skip list
 		} else {
 			existingScore = existing.Score
 		}
-		
+
 		switch lb.config.UpdatePolicy {
 		case UpdateIfHigher:
-			// 高分优先：新分数必须更高
-			// 低分优先：新分数必须更低（更小的分数视为"更高"）
+			// High score priority: new score must be higher
+			// Low score priority: new score must be lower (smaller scores are considered "higher")
 			if lb.config.ScoreOrder && score <= existingScore {
-				return nil, errors.New("新分数不高于现有分数")
+				return nil, errors.New("new score is not higher than existing score")
 			}
 			if !lb.config.ScoreOrder && score >= existingScore {
-				return nil, errors.New("新分数不低于现有分数")
+				return nil, errors.New("new score is not lower than existing score")
 			}
 		case UpdateIfLower:
-			// 高分优先：新分数必须更低(更小)
-			// 低分优先：新分数必须更高(更大)
+			// High score priority: new score must be lower (smaller)
+			// Low score priority: new score must be higher (higher times are worse)
 			if lb.config.ScoreOrder && score >= existingScore {
-				return nil, errors.New("新分数不低于现有分数")
+				return nil, errors.New("new score is not lower than existing score")
 			}
 			if !lb.config.ScoreOrder && score <= existingScore {
-				return nil, errors.New("新分数不高于现有分数")
+				return nil, errors.New("new score is not higher than existing score")
 			}
 		}
 	}
-	
-	// 适配分数顺序：跳表内部始终是高分靠前，所以对于低分优先的排行榜，需要将分数取反
+
+	// Adapt score ordering: skip list always keeps high scores at the front,
+	// so for low-score-first leaderboards, we need to invert the score
 	skipListScore := score
 	if !lb.config.ScoreOrder {
 		skipListScore = -score
 	}
-	
-	// 更新元素
+
+	// Update element
 	memberData := MemberData{
 		Member:    member,
-		Score:     score, // 保存原始分数
+		Score:     score, // Store original score
 		Data:      data,
 		UpdatedAt: time.Now(),
 	}
-	
+
 	lb.skipList.Insert(member, skipListScore, memberData)
-	
-	// 获取排名
+
+	// Get rank
 	rank := lb.skipList.GetRank(member, skipListScore)
-	
+
 	return &RankData{
 		Rank:       rank,
 		MemberData: memberData,
 	}, nil
 }
 
-// Remove 移除成员
+// Remove removes a member
 func (lb *Leaderboard) Remove(member string) bool {
 	lb.mutex.Lock()
 	defer lb.mutex.Unlock()
-	
+
 	element := lb.skipList.GetElementByMember(member)
 	if element == nil {
 		return false
 	}
-	
+
 	return lb.skipList.Delete(member, element.Score)
 }
 
-// GetRank 获取成员排名
+// GetRank gets a member's rank
 func (lb *Leaderboard) GetRank(member string) (int64, error) {
 	lb.mutex.RLock()
 	defer lb.mutex.RUnlock()
-	
+
 	element := lb.skipList.GetElementByMember(member)
 	if element == nil {
-		return 0, errors.New("成员不存在")
+		return 0, errors.New("member does not exist")
 	}
-	
+
 	rank := lb.skipList.GetRank(member, element.Score)
 	return rank, nil
 }
 
-// GetMember 获取成员数据
+// GetMember gets a member's data
 func (lb *Leaderboard) GetMember(member string) (*MemberData, error) {
 	lb.mutex.RLock()
 	defer lb.mutex.RUnlock()
-	
+
 	element := lb.skipList.GetElementByMember(member)
 	if element == nil {
-		return nil, errors.New("成员不存在")
+		return nil, errors.New("member does not exist")
 	}
-	
+
 	if data, ok := element.Data.(MemberData); ok {
 		return &data, nil
 	}
-	
-	return nil, errors.New("数据类型错误")
+
+	return nil, errors.New("data type error")
 }
 
-// GetMemberAndRank 获取成员数据和排名
+// GetMemberAndRank gets a member's data and rank
 func (lb *Leaderboard) GetMemberAndRank(member string) (*RankData, error) {
 	lb.mutex.RLock()
 	defer lb.mutex.RUnlock()
-	
+
 	element := lb.skipList.GetElementByMember(member)
 	if element == nil {
-		return nil, errors.New("成员不存在")
+		return nil, errors.New("member does not exist")
 	}
-	
+
 	rank := lb.skipList.GetRank(member, element.Score)
-	
+
 	if data, ok := element.Data.(MemberData); ok {
 		return &RankData{
 			Rank:       rank,
 			MemberData: data,
 		}, nil
 	}
-	
-	return nil, errors.New("数据类型错误")
+
+	return nil, errors.New("data type error")
 }
 
-// GetRankList 获取排行榜列表
+// GetRankList gets a list of rankings
 func (lb *Leaderboard) GetRankList(start, end int64) ([]*RankData, error) {
 	lb.mutex.RLock()
 	defer lb.mutex.RUnlock()
-	
+
 	elements := lb.skipList.GetRankRange(start, end)
 	result := make([]*RankData, 0, len(elements))
-	
-	for i, element := range elements {
-		rank := start + int64(i)
+
+	for _, element := range elements {
+		// 正确计算排名
+		member := element.Member
+		score := element.Score
+		rank := lb.skipList.GetRank(member, score)
+
 		if data, ok := element.Data.(MemberData); ok {
 			result = append(result, &RankData{
 				Rank:       rank,
@@ -216,50 +221,50 @@ func (lb *Leaderboard) GetRankList(start, end int64) ([]*RankData, error) {
 			})
 		}
 	}
-	
+
 	return result, nil
 }
 
-// GetAroundMember 获取指定成员附近的排名列表
+// GetAroundMember gets a list of rankings around a specified member
 func (lb *Leaderboard) GetAroundMember(member string, count int64) ([]*RankData, error) {
 	lb.mutex.RLock()
 	defer lb.mutex.RUnlock()
-	
-	// 获取成员排名
+
+	// Get member's rank
 	element := lb.skipList.GetElementByMember(member)
 	if element == nil {
-		return nil, errors.New("成员不存在")
+		return nil, errors.New("member does not exist")
 	}
-	
+
 	rank := lb.skipList.GetRank(member, element.Score)
-	
-	// 计算范围
+
+	// Calculate range
 	start := rank - count
 	if start < 1 {
 		start = 1
 	}
-	
+
 	end := rank + count
 	if end > int64(lb.skipList.Len()) {
 		end = int64(lb.skipList.Len())
 	}
-	
-	// 获取排名列表
+
+	// Get rank list
 	return lb.GetRankList(start, end)
 }
 
-// GetTotal 获取排行榜总成员数
+// GetTotal gets the total number of members in the leaderboard
 func (lb *Leaderboard) GetTotal() uint64 {
 	lb.mutex.RLock()
 	defer lb.mutex.RUnlock()
-	
+
 	return lb.skipList.Len()
 }
 
-// Reset 重置排行榜
+// Reset resets the leaderboard
 func (lb *Leaderboard) Reset() {
 	lb.mutex.Lock()
 	defer lb.mutex.Unlock()
-	
+
 	lb.skipList = NewSkipList()
-} 
+}
