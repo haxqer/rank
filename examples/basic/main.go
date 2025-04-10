@@ -125,64 +125,64 @@ func main() {
 	fmt.Printf("Player 2, Score: %d, Updated at: %s\n",
 		player2Data.Score, player2Data.UpdatedAt.Format(time.RFC3339))
 
-	// 展示低分优先的赛车排行榜示例
+	// Demo of a low-score-first racing leaderboard
 	fmt.Println("\n===============================")
-	fmt.Println("低分优先排行榜示例 - 赛车比赛用时")
+	fmt.Println("Low Score First Leaderboard Example - Racing Time")
 	fmt.Println("===============================")
 
-	// 创建低分优先排行榜
+	// Create a low-score-first leaderboard
 	raceConfig := rank.LeaderboardConfig{
 		ID:           "race_time",
 		Name:         "Racing Time Leaderboard",
-		ScoreOrder:   false,              // 低分优先
-		UpdatePolicy: rank.UpdateIfLower, // 只更新更低的分数（在低分优先的情况下，实际是只接受更高的分数）
+		ScoreOrder:   false,              // Low score first
+		UpdatePolicy: rank.UpdateIfLower, // Only update when score is lower (for low-score-first, this actually means accepting only higher scores)
 	}
 
 	raceLeaderboard := rank.NewLeaderboard(raceConfig)
 
-	// 添加初始比赛成绩
-	fmt.Println("\n添加初始比赛成绩:")
+	// Add initial race results
+	fmt.Println("\nAdding initial race results:")
 
-	r1, _ := raceLeaderboard.Add("racer1", 120, "选手1完成时间: 120秒")
-	fmt.Printf("选手1添加成功, 排名: %d, 用时: %d秒\n", r1.Rank, r1.Score)
+	r1, _ := raceLeaderboard.Add("racer1", 120, "Racer 1 completion time: 120 seconds")
+	fmt.Printf("Racer 1 added successfully, Rank: %d, Time: %d seconds\n", r1.Rank, r1.Score)
 
-	r2, _ := raceLeaderboard.Add("racer2", 105, "选手2完成时间: 105秒")
-	fmt.Printf("选手2添加成功, 排名: %d, 用时: %d秒\n", r2.Rank, r2.Score)
+	r2, _ := raceLeaderboard.Add("racer2", 105, "Racer 2 completion time: 105 seconds")
+	fmt.Printf("Racer 2 added successfully, Rank: %d, Time: %d seconds\n", r2.Rank, r2.Score)
 
-	r3, _ := raceLeaderboard.Add("racer3", 130, "选手3完成时间: 130秒")
-	fmt.Printf("选手3添加成功, 排名: %d, 用时: %d秒\n", r3.Rank, r3.Score)
+	r3, _ := raceLeaderboard.Add("racer3", 130, "Racer 3 completion time: 130 seconds")
+	fmt.Printf("Racer 3 added successfully, Rank: %d, Time: %d seconds\n", r3.Rank, r3.Score)
 
-	// 显示初始排行榜
-	fmt.Println("\n初始赛车排行榜:")
+	// Show initial leaderboard
+	fmt.Println("\nInitial Racing Leaderboard:")
 	initialRanks, _ := raceLeaderboard.GetRankList(1, 10)
 	for _, item := range initialRanks {
-		fmt.Printf("排名: %d, 选手: %s, 用时: %d秒, 备注: %s\n",
+		fmt.Printf("Rank: %d, Racer: %s, Time: %d seconds, Note: %s\n",
 			item.Rank, item.Member, item.Score, item.Data)
 	}
 
-	// 尝试添加更低的分数，应该失败
-	fmt.Println("\n尝试添加更低的用时 (应该失败):")
-	_, err := raceLeaderboard.Add("racer2", 100, "选手2新记录: 100秒")
+	// Try to add a lower score, should fail
+	fmt.Println("\nTrying to add a lower time (should fail):")
+	_, err := raceLeaderboard.Add("racer2", 100, "Racer 2 new record: 100 seconds")
 	if err != nil {
-		fmt.Printf("预期错误: %v\n", err)
+		fmt.Printf("Expected error: %v\n", err)
 	} else {
-		fmt.Println("选手2更新成功，但这不符合预期!")
+		fmt.Println("Racer 2 updated successfully, but this is not expected!")
 	}
 
-	// 尝试添加更高的分数，应该成功
-	fmt.Println("\n尝试添加更高的用时 (应该成功):")
-	updated, err := raceLeaderboard.Add("racer2", 110, "选手2新记录: 110秒")
+	// Try to add a higher score, should succeed
+	fmt.Println("\nTrying to add a higher time (should succeed):")
+	updated, err := raceLeaderboard.Add("racer2", 110, "Racer 2 new record: 110 seconds")
 	if err != nil {
-		fmt.Printf("更新选手2的成绩出错: %v\n", err)
+		fmt.Printf("Error updating racer 2's time: %v\n", err)
 	} else {
-		fmt.Printf("选手2更新成功, 新排名: %d, 新用时: %d秒\n", updated.Rank, updated.Score)
+		fmt.Printf("Racer 2 updated successfully, New Rank: %d, New Time: %d seconds\n", updated.Rank, updated.Score)
 	}
 
-	// 显示最终排行榜
-	fmt.Println("\n最终赛车排行榜:")
+	// Show final leaderboard
+	fmt.Println("\nFinal Racing Leaderboard:")
 	finalRanks, _ := raceLeaderboard.GetRankList(1, 10)
 	for _, item := range finalRanks {
-		fmt.Printf("排名: %d, 选手: %s, 用时: %d秒, 备注: %s\n",
+		fmt.Printf("Rank: %d, Racer: %s, Time: %d seconds, Note: %s\n",
 			item.Rank, item.Member, item.Score, item.Data)
 	}
 }
