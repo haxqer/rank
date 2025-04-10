@@ -117,7 +117,7 @@ func (sl *SkipList) Insert(member string, score int64, data interface{}) *Elemen
 			rank[i] = rank[i+1]
 		}
 
-		// 注意比较逻辑：分数高的排在前面，如果分数相同，按成员ID字典序排列
+		// Note the comparison logic: higher scores come first, if scores are the same, sort by member ID lexicographically
 		for x.level[i].forward != nil &&
 			(x.level[i].forward.element.Score > score ||
 				(x.level[i].forward.element.Score == score &&
@@ -162,7 +162,7 @@ func (sl *SkipList) Delete(member string, score int64) bool {
 
 	x := sl.head
 	for i := sl.level - 1; i >= 0; i-- {
-		// 注意比较逻辑：分数高的排在前面，如果分数相同，按成员ID字典序排列
+		// Note the comparison logic: higher scores come first, if scores are the same, sort by member ID lexicographically
 		for x.level[i].forward != nil &&
 			(x.level[i].forward.element.Score > score ||
 				(x.level[i].forward.element.Score == score &&
@@ -211,7 +211,7 @@ func (sl *SkipList) GetRank(member string, score int64) int64 {
 	x := sl.head
 
 	for i := sl.level - 1; i >= 0; i-- {
-		// 注意比较逻辑：分数高的排在前面，如果分数相同，按成员ID字典序排列
+		// Note the comparison logic: higher scores come first, if scores are the same, sort by member ID lexicographically
 		for x.level[i].forward != nil &&
 			(x.level[i].forward.element.Score > score ||
 				(x.level[i].forward.element.Score == score &&

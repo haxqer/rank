@@ -209,7 +209,7 @@ func (lb *Leaderboard) GetRankList(start, end int64) ([]*RankData, error) {
 	result := make([]*RankData, 0, len(elements))
 
 	for _, element := range elements {
-		// 正确计算排名
+		// Calculate rank correctly
 		member := element.Member
 		score := element.Score
 		rank := lb.skipList.GetRank(member, score)

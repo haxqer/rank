@@ -7,11 +7,11 @@ import (
 )
 
 func init() {
-	// 初始化随机数生成器
+	// Initialize random number generator
 	rand.Seed(time.Now().UnixNano())
 }
 
-// 生成随机字符串ID
+// Generate random string ID
 func generateID(n int) string {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	b := make([]byte, n)
@@ -21,7 +21,7 @@ func generateID(n int) string {
 	return string(b)
 }
 
-// 基准测试：跳表插入
+// Benchmark: skip list insertion
 func BenchmarkSkipListInsert(b *testing.B) {
 	benchmarks := []struct {
 		name string
@@ -35,7 +35,7 @@ func BenchmarkSkipListInsert(b *testing.B) {
 
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
-			// 预生成所有ID和分数，避免在计时部分生成
+			// Pre-generate all IDs and scores to avoid generation during timing
 			ids := make([]string, bm.size)
 			scores := make([]int64, bm.size)
 			for i := 0; i < bm.size; i++ {
@@ -43,22 +43,22 @@ func BenchmarkSkipListInsert(b *testing.B) {
 				scores[i] = rand.Int63n(10000000)
 			}
 
-			// 创建跳表
+			// Create skip list
 			sl := NewSkipList()
-			
-			// 先插入一些元素，以便更准确地模拟真实场景的插入性能
-			// 不同大小的测试，预插入不同数量的元素
+
+			// Insert some elements first to better simulate real-world insertion performance
+			// Different pre-insert size for different test sizes
 			preInsertSize := bm.size / 2
 			for i := 0; i < preInsertSize; i++ {
 				sl.Insert(generateID(8), rand.Int63n(10000000), nil)
 			}
-			
-			// 重置计时器
+
+			// Reset timer
 			b.ResetTimer()
-			
-			// 执行b.N次单独的Insert操作，计算平均时间
+
+			// Execute b.N separate Insert operations and calculate average time
 			for i := 0; i < b.N; i++ {
-				// 使用循环中的i作为索引，循环读取已经预生成的IDs和分数
+				// Use i as an index to loop through pre-generated IDs and scores
 				idx := i % bm.size
 				sl.Insert(ids[idx], scores[idx], nil)
 			}
@@ -66,7 +66,7 @@ func BenchmarkSkipListInsert(b *testing.B) {
 	}
 }
 
-// 基准测试：跳表查找
+// Benchmark: skip list lookup
 func BenchmarkSkipListGet(b *testing.B) {
 	benchmarks := []struct {
 		name string
@@ -91,7 +91,7 @@ func BenchmarkSkipListGet(b *testing.B) {
 			sl.Insert(ids[i], scores[i], nil)
 		}
 
-		// 随机选择要查找的ID
+		// Randomly select IDs to look up
 		lookupIndices := make([]int, 1000)
 		if bm.size < 1000 {
 			lookupIndices = make([]int, bm.size)
@@ -114,7 +114,7 @@ func BenchmarkSkipListGet(b *testing.B) {
 	}
 }
 
-// 基准测试：跳表获取排名
+// Benchmark: skip list get rank
 func BenchmarkSkipListGetRank(b *testing.B) {
 	benchmarks := []struct {
 		name string
@@ -139,7 +139,7 @@ func BenchmarkSkipListGetRank(b *testing.B) {
 			sl.Insert(ids[i], scores[i], nil)
 		}
 
-		// 随机选择要查找的ID和分数
+		// Randomly select IDs and scores to look up
 		lookupIndices := make([]int, 1000)
 		if bm.size < 1000 {
 			lookupIndices = make([]int, bm.size)
@@ -162,7 +162,7 @@ func BenchmarkSkipListGetRank(b *testing.B) {
 	}
 }
 
-// 基准测试：跳表按排名获取元素
+// Benchmark: skip list get element by rank
 func BenchmarkSkipListGetByRank(b *testing.B) {
 	benchmarks := []struct {
 		name string
@@ -190,7 +190,7 @@ func BenchmarkSkipListGetByRank(b *testing.B) {
 		b.Run(bm.name, func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				// 随机获取一个排名
+				// Randomly get a rank
 				rank := int64(rand.Intn(int(sl.Len())) + 1)
 				_ = sl.GetByRank(rank)
 			}
@@ -198,7 +198,7 @@ func BenchmarkSkipListGetByRank(b *testing.B) {
 	}
 }
 
-// 基准测试：跳表获取排名范围
+// Benchmark: skip list get rank range
 func BenchmarkSkipListGetRankRange(b *testing.B) {
 	benchmarks := []struct {
 		name      string
@@ -228,7 +228,7 @@ func BenchmarkSkipListGetRankRange(b *testing.B) {
 		b.Run(bm.name, func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				// 随机获取一个范围
+				// Randomly get a range
 				start := int64(rand.Intn(int(sl.Len()-uint64(bm.rangeSize))) + 1)
 				end := start + int64(bm.rangeSize) - 1
 				_ = sl.GetRankRange(start, end)
@@ -237,7 +237,7 @@ func BenchmarkSkipListGetRankRange(b *testing.B) {
 	}
 }
 
-// 基准测试：排行榜添加元素
+// Benchmark: leaderboard add
 func BenchmarkLeaderboardAdd(b *testing.B) {
 	benchmarks := []struct {
 		name string
@@ -251,7 +251,7 @@ func BenchmarkLeaderboardAdd(b *testing.B) {
 
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
-			// 预生成所有ID和分数
+			// Pre-generate all IDs and scores
 			ids := make([]string, bm.size)
 			scores := make([]int64, bm.size)
 			for i := 0; i < bm.size; i++ {
@@ -266,17 +266,17 @@ func BenchmarkLeaderboardAdd(b *testing.B) {
 				UpdatePolicy: UpdateAlways,
 			}
 
-			// 创建排行榜
+			// Create leaderboard
 			lb := NewLeaderboard(config)
-			
-			// 预先插入一些元素，以模拟真实环境
+
+			// Pre-insert some elements to simulate real environment
 			preInsertSize := bm.size / 2
 			for i := 0; i < preInsertSize; i++ {
 				lb.Add(generateID(8), rand.Int63n(1000000), nil)
 			}
 
 			b.ResetTimer()
-			// 测试单个Add操作的性能
+			// Test single Add operation performance
 			for i := 0; i < b.N; i++ {
 				idx := i % bm.size
 				_, _ = lb.Add(ids[idx], scores[idx], nil)
@@ -285,7 +285,7 @@ func BenchmarkLeaderboardAdd(b *testing.B) {
 	}
 }
 
-// 基准测试：排行榜获取排名
+// Benchmark: leaderboard get rank
 func BenchmarkLeaderboardGetRank(b *testing.B) {
 	benchmarks := []struct {
 		name string
@@ -298,7 +298,7 @@ func BenchmarkLeaderboardGetRank(b *testing.B) {
 	}
 
 	for _, bm := range benchmarks {
-		// 预生成所有ID和分数
+		// Pre-generate all IDs and scores
 		ids := make([]string, bm.size)
 		scores := make([]int64, bm.size)
 		for i := 0; i < bm.size; i++ {
@@ -318,7 +318,7 @@ func BenchmarkLeaderboardGetRank(b *testing.B) {
 			lb.Add(ids[i], scores[i], nil)
 		}
 
-		// 随机选择要查找的ID
+		// Randomly select IDs to look up
 		lookupIndices := make([]int, 1000)
 		if bm.size < 1000 {
 			lookupIndices = make([]int, bm.size)
@@ -341,7 +341,7 @@ func BenchmarkLeaderboardGetRank(b *testing.B) {
 	}
 }
 
-// 基准测试：排行榜获取排名列表
+// Benchmark: leaderboard get rank list
 func BenchmarkLeaderboardGetRankList(b *testing.B) {
 	benchmarks := []struct {
 		name      string
@@ -356,7 +356,7 @@ func BenchmarkLeaderboardGetRankList(b *testing.B) {
 	}
 
 	for _, bm := range benchmarks {
-		// 预生成所有ID和分数
+		// Pre-generate all IDs and scores
 		ids := make([]string, bm.size)
 		scores := make([]int64, bm.size)
 		for i := 0; i < bm.size; i++ {
@@ -379,7 +379,7 @@ func BenchmarkLeaderboardGetRankList(b *testing.B) {
 		b.Run(bm.name, func(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				// 随机获取一个范围
+				// Randomly get a range
 				start := int64(rand.Intn(int(lb.GetTotal()-uint64(bm.rangeSize))) + 1)
 				end := start + int64(bm.rangeSize) - 1
 				_, _ = lb.GetRankList(start, end)
@@ -388,12 +388,12 @@ func BenchmarkLeaderboardGetRankList(b *testing.B) {
 	}
 }
 
-// 运行性能测试并生成报告
+// Run performance test and generate report
 func TestBenchmarkAndReport(t *testing.T) {
 	if testing.Short() {
-		t.Skip("跳过基准测试")
+		t.Skip("Skip benchmark test")
 	}
 
-	// 此函数仅用于生成报告，实际不会在正常测试中运行
-	// 使用 go test -bench=. 命令运行基准测试
+	// This function is only used for generating reports and will not run in normal tests
+	// Use go test -bench=. command to run benchmark test
 }

@@ -5,17 +5,17 @@ import (
 )
 
 func TestLeaderboardBasic(t *testing.T) {
-	// 创建排行榜
+	// Create leaderboard
 	config := LeaderboardConfig{
 		ID:           "test",
-		Name:         "测试排行榜",
+		Name:         "Test Leaderboard",
 		ScoreOrder:   true,
 		UpdatePolicy: UpdateAlways,
 	}
 
 	lb := NewLeaderboard(config)
 
-	// 测试添加
+	// Test adding
 	rankData, err := lb.Add("member1", 100, "data1")
 	if err != nil {
 		t.Fatalf("Failed to add member: %v", err)
@@ -25,16 +25,16 @@ func TestLeaderboardBasic(t *testing.T) {
 		t.Errorf("Expected rank 1, got %d", rankData.Rank)
 	}
 
-	// 添加更多成员
+	// Add more members
 	lb.Add("member2", 200, "data2")
 	lb.Add("member3", 50, "data3")
 
-	// 测试总数
+	// Test total count
 	if lb.GetTotal() != 3 {
 		t.Errorf("Expected total 3, got %d", lb.GetTotal())
 	}
 
-	// 测试获取排名
+	// Test getting rank
 	rank, err := lb.GetRank("member2")
 	if err != nil {
 		t.Fatalf("Failed to get rank: %v", err)
@@ -44,7 +44,7 @@ func TestLeaderboardBasic(t *testing.T) {
 		t.Errorf("Expected rank 1, got %d", rank)
 	}
 
-	// 测试获取成员数据
+	// Test getting member data
 	memberData, err := lb.GetMember("member1")
 	if err != nil {
 		t.Fatalf("Failed to get member: %v", err)
@@ -58,7 +58,7 @@ func TestLeaderboardBasic(t *testing.T) {
 		t.Errorf("Expected data 'data1', got %v", memberData.Data)
 	}
 
-	// 测试获取成员和排名
+	// Test getting member and rank
 	memberRank, err := lb.GetMemberAndRank("member3")
 	if err != nil {
 		t.Fatalf("Failed to get member and rank: %v", err)
@@ -68,7 +68,7 @@ func TestLeaderboardBasic(t *testing.T) {
 		t.Errorf("Expected rank 3, got %d", memberRank.Rank)
 	}
 
-	// 测试获取排行榜列表
+	// Test getting rank list
 	rankList, err := lb.GetRankList(1, 3)
 	if err != nil {
 		t.Fatalf("Failed to get rank list: %v", err)
@@ -82,7 +82,7 @@ func TestLeaderboardBasic(t *testing.T) {
 		t.Errorf("Expected rank 1 to be member2, got %s", rankList[0].Member)
 	}
 
-	// 测试获取周围成员
+	// Test getting members around
 	aroundList, err := lb.GetAroundMember("member1", 1)
 	if err != nil {
 		t.Fatalf("Failed to get around list: %v", err)
@@ -92,7 +92,7 @@ func TestLeaderboardBasic(t *testing.T) {
 		t.Errorf("Expected 3 items in around list, got %d", len(aroundList))
 	}
 
-	// 测试移除成员
+	// Test removing member
 	removed := lb.Remove("member3")
 	if !removed {
 		t.Error("Failed to remove member3")
@@ -102,7 +102,7 @@ func TestLeaderboardBasic(t *testing.T) {
 		t.Errorf("Expected total 2 after removal, got %d", lb.GetTotal())
 	}
 
-	// 测试重置
+	// Test reset
 	lb.Reset()
 	if lb.GetTotal() != 0 {
 		t.Errorf("Expected total 0 after reset, got %d", lb.GetTotal())
@@ -110,26 +110,26 @@ func TestLeaderboardBasic(t *testing.T) {
 }
 
 func TestLeaderboardUpdatePolicy(t *testing.T) {
-	// 测试高分优先 + UpdateIfHigher策略
+	// Test high score priority + UpdateIfHigher policy
 	higherConfig := LeaderboardConfig{
 		ID:           "higher_test",
-		Name:         "高分优先测试",
-		ScoreOrder:   true, // 高分优先
+		Name:         "High Score Priority Test",
+		ScoreOrder:   true, // High score priority
 		UpdatePolicy: UpdateIfHigher,
 	}
 
 	higherLB := NewLeaderboard(higherConfig)
 
-	// 添加初始分数
+	// Add initial score
 	higherLB.Add("player1", 100, nil)
 
-	// 尝试添加更低的分数，应该失败
+	// Try to add a lower score, should fail
 	_, err := higherLB.Add("player1", 50, nil)
 	if err == nil {
 		t.Error("Expected error when adding lower score with UpdateIfHigher policy")
 	}
 
-	// 尝试添加更高的分数，应该成功
+	// Try to add a higher score, should succeed
 	rankData, err := higherLB.Add("player1", 150, nil)
 	if err != nil {
 		t.Errorf("Failed to add higher score with UpdateIfHigher policy: %v", err)
@@ -139,26 +139,26 @@ func TestLeaderboardUpdatePolicy(t *testing.T) {
 		t.Errorf("Expected score 150, got %d", rankData.Score)
 	}
 
-	// 测试低分优先 + UpdateIfLower策略
+	// Test low score priority + UpdateIfLower policy
 	lowerConfig := LeaderboardConfig{
 		ID:           "lower_test",
-		Name:         "低分优先测试",
-		ScoreOrder:   false, // 低分优先
+		Name:         "Low Score Priority Test",
+		ScoreOrder:   false, // Low score priority
 		UpdatePolicy: UpdateIfLower,
 	}
 
 	lowerLB := NewLeaderboard(lowerConfig)
 
-	// 添加初始分数
+	// Add initial score
 	lowerLB.Add("player1", 100, nil)
 
-	// 尝试添加更低的分数，应该失败
+	// Try to add a lower score, should fail
 	_, err = lowerLB.Add("player1", 50, nil)
 	if err == nil {
 		t.Error("Expected error when adding lower score with UpdateIfLower policy in a low-score-first leaderboard")
 	}
 
-	// 尝试添加更高的分数，应该成功
+	// Try to add a higher score, should succeed
 	rankData, err = lowerLB.Add("player1", 150, nil)
 	if err != nil {
 		t.Errorf("Failed to add higher score with UpdateIfLower policy in a low-score-first leaderboard: %v", err)
@@ -168,26 +168,26 @@ func TestLeaderboardUpdatePolicy(t *testing.T) {
 		t.Errorf("Expected score 150, got %d", rankData.Score)
 	}
 
-	// 测试高分优先 + UpdateIfLower策略
+	// Test high score priority + UpdateIfLower policy
 	higherLowerConfig := LeaderboardConfig{
 		ID:           "higher_lower_test",
-		Name:         "高分优先低分更新测试",
-		ScoreOrder:   true,          // 高分优先
-		UpdatePolicy: UpdateIfLower, // 只接受更低的分数
+		Name:         "High Score Priority Low Score Update Test",
+		ScoreOrder:   true,          // High score priority
+		UpdatePolicy: UpdateIfLower, // Only accept lower scores
 	}
 
 	higherLowerLB := NewLeaderboard(higherLowerConfig)
 
-	// 添加初始分数
+	// Add initial score
 	higherLowerLB.Add("player1", 100, nil)
 
-	// 尝试添加更高的分数，应该失败
+	// Try to add a higher score, should fail
 	_, err = higherLowerLB.Add("player1", 150, nil)
 	if err == nil {
 		t.Error("Expected error when adding higher score with UpdateIfLower policy in a high-score-first leaderboard")
 	}
 
-	// 尝试添加更低的分数，应该成功
+	// Try to add a lower score, should succeed
 	rankData, err = higherLowerLB.Add("player1", 50, nil)
 	if err != nil {
 		t.Errorf("Failed to add lower score with UpdateIfLower policy in a high-score-first leaderboard: %v", err)
@@ -199,10 +199,10 @@ func TestLeaderboardUpdatePolicy(t *testing.T) {
 }
 
 func TestLeaderboardScoreOrder(t *testing.T) {
-	// 测试高分优先
+	// Test high score priority
 	highConfig := LeaderboardConfig{
 		ID:           "high_first",
-		Name:         "高分优先",
+		Name:         "High Score First",
 		ScoreOrder:   true,
 		UpdatePolicy: UpdateAlways,
 	}
@@ -213,7 +213,7 @@ func TestLeaderboardScoreOrder(t *testing.T) {
 	highLB.Add("player2", 200, nil)
 	highLB.Add("player3", 150, nil)
 
-	// 检查排名
+	// Check ranks
 	rank, _ := highLB.GetRank("player2")
 	if rank != 1 {
 		t.Errorf("Expected player2 to be rank 1, got %d", rank)
@@ -229,10 +229,10 @@ func TestLeaderboardScoreOrder(t *testing.T) {
 		t.Errorf("Expected player1 to be rank 3, got %d", rank)
 	}
 
-	// 测试低分优先
+	// Test low score priority
 	lowConfig := LeaderboardConfig{
 		ID:           "low_first",
-		Name:         "低分优先",
+		Name:         "Low Score First",
 		ScoreOrder:   false,
 		UpdatePolicy: UpdateAlways,
 	}
@@ -243,7 +243,7 @@ func TestLeaderboardScoreOrder(t *testing.T) {
 	lowLB.Add("player2", 200, nil)
 	lowLB.Add("player3", 150, nil)
 
-	// 检查排名
+	// Check ranks
 	rank, _ = lowLB.GetRank("player1")
 	if rank != 1 {
 		t.Errorf("Expected player1 to be rank 1, got %d", rank)
